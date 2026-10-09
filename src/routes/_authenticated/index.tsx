@@ -10,7 +10,7 @@ import { repository, sortByDate, summarize, useTransactions } from "@/lib/financ
 import { PERIOD_LABELS, periodBounds, transactionsInPeriod, type Period } from "@/lib/finance/dashboard";
 import { formatBRL, formatDate, todayISO } from "@/lib/format";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Painel — FinanChat" },

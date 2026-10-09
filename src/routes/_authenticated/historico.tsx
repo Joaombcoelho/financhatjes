@@ -8,7 +8,7 @@ import { TransactionForm } from "@/components/finance/TransactionForm";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { repository, sampleTransactions, sortByDate, useTransactions } from "@/lib/finance/store";
 
-export const Route = createFileRoute("/historico")({
+export const Route = createFileRoute("/_authenticated/historico")({
   head: () => ({
     meta: [
       { title: "Histórico — FinanChat" },
