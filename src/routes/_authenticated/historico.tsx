@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/finance/Notice";
 import { TransactionForm } from "@/components/finance/TransactionForm";
 import { TransactionList } from "@/components/finance/TransactionList";
-import { repository, sampleTransactions, sortByDate, useTransactions } from "@/lib/finance/store";
+import { repository, sampleTransactions, sortByDate, useLoadState, useTransactions } from "@/lib/finance/store";
 
 export const Route = createFileRoute("/_authenticated/historico")({
   head: () => ({
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/historico")({
 
 function History() {
   const list = sortByDate(useTransactions());
+  const load = useLoadState();
   const [adding, setAdding] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -49,9 +50,9 @@ function History() {
             idPrefix="hist"
             submitLabel="Salvar transação"
             onCancel={() => setAdding(false)}
-            onSubmit={(t) => {
+            onSubmit={async (t) => {
               try {
-                repository.add(t);
+                await repository.add(t);
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
                 return;
@@ -65,19 +66,26 @@ function History() {
       )}
 
       <section className="rounded-xl border border-border bg-card px-5 py-2 shadow-sm">
-        {list.length === 0 ? (
+        {load.status === "error" ? (
+          <div role="alert" className="py-8 text-center">
+            <p className="font-semibold text-destructive">{load.error}</p>
+            <Button className="mt-4" variant="outline" onClick={() => void repository.load()}>Tentar novamente</Button>
+          </div>
+        ) : load.status !== "ready" ? (
+          <p role="status" className="py-8 text-center text-muted-foreground">Carregando transações…</p>
+        ) : list.length === 0 ? (
           <div className="py-8 text-center">
             <p className="font-semibold">Nenhuma transação ainda.</p>
-            <Button className="mt-4" variant="outline" size="lg" onClick={() => { try { repository.addMany(sampleTransactions()); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); } }}>
+            <Button className="mt-4" variant="outline" size="lg" onClick={async () => { try { await repository.addMany(sampleTransactions()); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); } }}>
               Carregar dados de exemplo
             </Button>
           </div>
         ) : (
           <TransactionList
             items={list}
-            onDelete={(id) => {
+            onDelete={async (id) => {
               try {
-                repository.remove(id);
+                await repository.remove(id);
                 toast.success("Transação excluída.");
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Não foi possível excluir.");
@@ -86,7 +94,7 @@ function History() {
           />
         )}
       </section>
-      <Notice>Seus dados ficam salvos apenas neste navegador. Ao limpar os dados do site, eles serão apagados.</Notice>
+      <Notice>Suas transações ficam salvas na sua conta e só você tem acesso a elas.</Notice>
     </div>
   );
 }

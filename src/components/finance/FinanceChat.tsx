@@ -75,12 +75,12 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
     setMessages((m) => m.map((x) => (x.id === id && x.role === "proposal" ? { ...x, ...patch } : x)));
   }
 
-  function confirm(id: number, data: NewTransaction) {
+  async function confirm(id: number, data: NewTransaction) {
     if (saving.current.has(id)) return; // evita duplicação por cliques repetidos
     saving.current.add(id);
     update(id, { status: "saving" });
     try {
-      repository.add(data);
+      await repository.add(data);
       update(id, { data, status: "confirmed", error: undefined });
     } catch (e) {
       saving.current.delete(id);

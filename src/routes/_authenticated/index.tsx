@@ -6,7 +6,7 @@ import { Notice } from "@/components/finance/Notice";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { FinanceChat } from "@/components/finance/FinanceChat";
 import { FinancialAnalysis } from "@/components/finance/FinancialAnalysis";
-import { repository, sortByDate, summarize, useTransactions } from "@/lib/finance/store";
+import { repository, sortByDate, summarize, useLoadState, useTransactions } from "@/lib/finance/store";
 import { PERIOD_LABELS, periodBounds, transactionsInPeriod, type Period } from "@/lib/finance/dashboard";
 import { formatBRL, formatDate, todayISO } from "@/lib/format";
 
@@ -40,6 +40,7 @@ function StatCard({ label, value, detail, icon: Icon, tone }: { label: string; v
 
 function Dashboard() {
   const list = useTransactions();
+  const load = useLoadState();
   const [period, setPeriod] = useState<Period>("month");
   const today = todayISO();
   const real = list.filter((t) => !t.sample);
@@ -70,8 +71,9 @@ function Dashboard() {
         <StatCard label="Despesas" value={expense} detail="Total gasto no período selecionado." icon={ArrowDownCircle} tone="expense" />
         <StatCard label="Resultado do período" value={balance} detail="Receitas menos despesas do período." icon={TrendingUp} tone="neutral" />
       </div>
-      {repository.hadLoadError() && <Notice>Não foi possível ler os dados salvos. Verifique o armazenamento do navegador antes de registrar novas transações.</Notice>}
-      {list.some((t) => t.sample) && <Notice>Dados com o selo “Exemplo” não entram nos indicadores e gráficos deste dashboard. Eles continuam disponíveis no histórico. <button className="font-semibold underline underline-offset-4" onClick={() => { try { repository.removeSamples(); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível remover os exemplos."); } }}>Remover exemplos</button></Notice>}
+      {load.status === "error" && <Notice><span role="alert">{load.error}</span> <button className="font-semibold underline underline-offset-4" onClick={() => void repository.load()}>Tentar novamente</button></Notice>}
+      {load.status === "loading" && <p role="status" className="text-muted-foreground">Carregando suas transações…</p>}
+      {list.some((t) => t.sample) && <Notice>Dados com o selo “Exemplo” não entram nos indicadores e gráficos deste dashboard. Eles continuam disponíveis no histórico. <button className="font-semibold underline underline-offset-4" onClick={async () => { try { await repository.removeSamples(); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível remover os exemplos."); } }}>Remover exemplos</button></Notice>}
       <FinanceChat embedded />
       <FinancialAnalysis items={scoped} period={period} today={today} />
       <section aria-labelledby="recent-title" className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -82,7 +84,7 @@ function Dashboard() {
         <p className="mb-2 text-sm text-muted-foreground">Últimos registros de todos os períodos.</p>
         {recent.length ? <TransactionList items={recent} /> : <p className="py-5 text-muted-foreground">Nenhuma transação registrada. Conte ao chat seu primeiro gasto ou recebimento e confirme os dados.</p>}
       </section>
-      <Notice>Seus dados ficam salvos apenas neste navegador. Ao limpar os dados do site, eles serão apagados.</Notice>
+      <Notice>Suas transações ficam salvas na sua conta e só você tem acesso a elas.</Notice>
     </div>
   );
 }
