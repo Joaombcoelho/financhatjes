@@ -49,7 +49,7 @@ function createLocalRepository(): TransactionRepository {
     try {
       const raw = window.localStorage.getItem(KEY);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
-      cache = Array.isArray(parsed) ? parsed.filter(isValid) : [];
+      cache = Array.isArray(parsed) ? parsed.map((t) => (t && typeof t === "object" && !("createdAt" in t) ? { ...t, createdAt: `${(t as Transaction).date}T00:00:00.000Z` } : t)).filter(isValid) : [];
     } catch {
       loadError = true;
       cache = [];
