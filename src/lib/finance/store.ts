@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { NewTransaction, Transaction } from "./types";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type NewTransaction, type Transaction } from "./types";
 import { todayISO } from "../format";
 
 /**
@@ -8,6 +8,8 @@ import { todayISO } from "../format";
  */
 export interface TransactionRepository {
   list(): Transaction[];
+  /** true se os dados salvos não puderam ser lidos. */
+  hadLoadError(): boolean;
   add(t: NewTransaction): Transaction;
   addMany(t: NewTransaction[]): void;
   remove(id: string): void;
@@ -15,11 +17,30 @@ export interface TransactionRepository {
   subscribe(listener: () => void): () => void;
 }
 
+export class StorageError extends Error {}
+
+const ALL_CATEGORIES: readonly string[] = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+
+function isValid(t: unknown): t is Transaction {
+  if (!t || typeof t !== "object") return false;
+  const x = t as Record<string, unknown>;
+  return (
+    typeof x.id === "string" &&
+    (x.type === "receita" || x.type === "despesa") &&
+    typeof x.description === "string" && x.description.trim().length > 0 &&
+    typeof x.amount === "number" && Number.isFinite(x.amount) && x.amount > 0 &&
+    typeof x.category === "string" && ALL_CATEGORIES.includes(x.category) &&
+    typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) &&
+    typeof x.createdAt === "string"
+  );
+}
+
 const KEY = "financhat:transactions:v1";
 const EMPTY: Transaction[] = [];
 
 function createLocalRepository(): TransactionRepository {
   let cache: Transaction[] | null = null;
+  let loadError = false;
   const listeners = new Set<() => void>();
 
   const read = (): Transaction[] => {
@@ -27,23 +48,34 @@ function createLocalRepository(): TransactionRepository {
     if (cache) return cache;
     try {
       const raw = window.localStorage.getItem(KEY);
-      cache = raw ? (JSON.parse(raw) as Transaction[]) : [];
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      cache = Array.isArray(parsed) ? parsed.filter(isValid) : [];
     } catch {
+      loadError = true;
       cache = [];
     }
     return cache;
   };
 
+  /** Grava e só atualiza a tela se a gravação der certo; lança StorageError caso contrário. */
   const write = (next: Transaction[]) => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      throw new StorageError("Não foi possível salvar no navegador. Verifique se o armazenamento está liberado e com espaço.");
+    }
     cache = next;
-    window.localStorage.setItem(KEY, JSON.stringify(next));
     listeners.forEach((l) => l());
   };
 
-  const make = (t: NewTransaction): Transaction => ({ ...t, id: crypto.randomUUID() });
+  const make = (t: NewTransaction): Transaction => {
+    if (!isValid({ ...t, id: "x", createdAt: "x" })) throw new StorageError("Dados da transação inválidos.");
+    return { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+  };
 
   return {
     list: read,
+    hadLoadError: () => (read(), loadError),
     add(t) {
       const created = make(t);
       write([created, ...read()]);
@@ -74,7 +106,7 @@ export function useTransactions(): Transaction[] {
 }
 
 export function sortByDate(list: Transaction[]): Transaction[] {
-  return [...list].sort((a, b) => b.date.localeCompare(a.date));
+  return [...list].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
 export function summarize(list: Transaction[]) {
