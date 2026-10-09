@@ -26,7 +26,7 @@ export const Route = createFileRoute("/chat")({
 });
 
 type Status = "pending" | "editing" | "saving" | "confirmed" | "cancelled" | "error";
-type Proposal = { id: number; role: "proposal"; data: NewTransaction; status: Status; dateGuessed: boolean; error?: string };
+type Proposal = { id: number; role: "proposal"; data: NewTransaction; status: Status; dateGuessed: boolean; error?: string | undefined };
 type Msg =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "bot"; text: string; tone?: "error" }

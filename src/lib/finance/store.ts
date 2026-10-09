@@ -23,7 +23,7 @@ const ALL_CATEGORIES: readonly string[] = [...EXPENSE_CATEGORIES, ...INCOME_CATE
 
 function isValid(t: unknown): t is Transaction {
   if (!t || typeof t !== "object") return false;
-  const x = t as Record<string, unknown>;
+  const x = t as Partial<Record<keyof Transaction, unknown>>;
   return (
     typeof x.id === "string" &&
     (x.type === "receita" || x.type === "despesa") &&

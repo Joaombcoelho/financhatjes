@@ -38,7 +38,7 @@ Regras:
 export const interpretMessage = createServerFn({ method: "POST" })
   .validator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }): Promise<InterpretResult> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { ok: false, message: "A IA não está configurada no servidor (chave ausente)." };
 
     const { createOpenAI } = await import("@ai-sdk/openai");
