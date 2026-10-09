@@ -1,5 +1,9 @@
-import { Link } from "@tanstack/react-router";
-import { LayoutDashboard, List, MessageCircle, Wallet } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { LayoutDashboard, List, LogOut, MessageCircle, Wallet } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { repository } from "@/lib/finance/store";
 
 const items = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
@@ -11,11 +15,23 @@ const linkBase =
   "flex items-center gap-2 rounded-md px-3 py-2 font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground";
 const linkActive = "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground";
 
-export function AppNav() {
+export function AppNav({ email, name }: { email: string; name: string }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    const { error } = await supabase.auth.signOut();
+    if (error) { toast.error("Não foi possível sair. Tente novamente."); return; }
+    repository.reset();
+    await navigate({ to: "/auth", replace: true });
+  }
+
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Link to="/" className="flex items-center gap-2 text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Wallet className="h-5 w-5" aria-hidden="true" />
@@ -30,6 +46,12 @@ export function AppNav() {
               </Link>
             ))}
           </nav>
+          <div className="flex items-center gap-2">
+            <span className="hidden max-w-40 truncate text-sm text-muted-foreground lg:inline" title={email}>{name || email}</span>
+            <button type="button" onClick={signOut} className={linkBase}>
+              <LogOut className="h-5 w-5" aria-hidden="true" /> Sair
+            </button>
+          </div>
         </div>
       </header>
       <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface md:hidden">

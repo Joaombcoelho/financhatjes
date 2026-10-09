@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FinanceChat } from "@/components/finance/FinanceChat";
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({
     meta: [
       { title: "Chat financeiro — FinanChat" },

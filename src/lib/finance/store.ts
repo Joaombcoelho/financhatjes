@@ -1,19 +1,27 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type NewTransaction, type Transaction } from "./types";
 import { todayISO } from "../format";
 
 /**
- * Repositório de transações. A implementação atual usa o localStorage do navegador;
- * para usar um banco de dados, basta criar outra implementação desta interface.
+ * Repositório de transações do usuário autenticado, salvo no banco de dados.
+ * O isolamento entre usuários é garantido pelo banco (RLS): o user_id é preenchido
+ * pelo próprio banco a partir da sessão, nunca enviado pelo navegador.
  */
+export type LoadStatus = "idle" | "loading" | "ready" | "error";
+
 export interface TransactionRepository {
   list(): Transaction[];
-  /** true se os dados salvos não puderam ser lidos. */
-  hadLoadError(): boolean;
-  add(t: NewTransaction): Transaction;
-  addMany(t: NewTransaction[]): void;
-  remove(id: string): void;
-  removeSamples(): void;
+  status(): LoadStatus;
+  /** Mensagem do último erro de carregamento, se houver. */
+  loadError(): string | null;
+  load(): Promise<void>;
+  add(t: NewTransaction): Promise<Transaction>;
+  addMany(t: NewTransaction[]): Promise<void>;
+  remove(id: string): Promise<void>;
+  removeSamples(): Promise<void>;
+  /** Limpa o cache (ao sair ou trocar de conta). */
+  reset(): void;
   subscribe(listener: () => void): () => void;
 }
 
@@ -21,13 +29,13 @@ export class StorageError extends Error {}
 
 const ALL_CATEGORIES: readonly string[] = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
 
-function isValid(t: unknown): t is Transaction {
+export function isValid(t: unknown): t is Transaction {
   if (!t || typeof t !== "object") return false;
   const x = t as Partial<Record<keyof Transaction, unknown>>;
   return (
     typeof x.id === "string" &&
     (x.type === "receita" || x.type === "despesa") &&
-    typeof x.description === "string" && x.description.trim().length > 0 &&
+    typeof x.description === "string" && x.description.trim().length > 0 && x.description.length <= 200 &&
     typeof x.amount === "number" && Number.isFinite(x.amount) && x.amount > 0 &&
     typeof x.category === "string" && ALL_CATEGORIES.includes(x.category) &&
     typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) &&
@@ -35,74 +43,143 @@ function isValid(t: unknown): t is Transaction {
   );
 }
 
-const KEY = "financhat:transactions:v1";
+/** Traduz erros do banco/rede em mensagens claras. */
+export function friendlyError(e: unknown, fallback: string): string {
+  const msg = (e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "").toLowerCase();
+  const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
+  if (msg.includes("failed to fetch") || msg.includes("network")) return "Falha de conexão. Verifique sua internet e tente novamente.";
+  if (msg.includes("jwt") || code === "PGRST301" || code === "401") return "Sua sessão expirou. Entre novamente para continuar.";
+  if (code === "42501") return "Você não tem permissão para esta operação. Entre novamente.";
+  return fallback;
+}
+
+type Row = {
+  id: string;
+  description: string;
+  amount: number | string;
+  type: string;
+  category: string;
+  transaction_date: string;
+  is_sample: boolean;
+  created_at: string;
+};
+
+const COLUMNS = "id, description, amount, type, category, transaction_date, is_sample, created_at";
+
+function fromRow(r: Row): Transaction {
+  return {
+    id: r.id,
+    type: r.type === "income" ? "receita" : "despesa",
+    description: r.description,
+    amount: Number(r.amount),
+    category: r.category,
+    date: r.transaction_date,
+    createdAt: r.created_at,
+    ...(r.is_sample ? { sample: true } : {}),
+  };
+}
+
+export function toRow(t: NewTransaction) {
+  if (!isValid({ ...t, id: "x", createdAt: "x" })) throw new StorageError("Dados da transação inválidos.");
+  return {
+    description: t.description.trim(),
+    amount: Math.round(t.amount * 100) / 100,
+    type: t.type === "receita" ? "income" : "expense",
+    category: t.category,
+    transaction_date: t.date,
+    is_sample: !!t.sample,
+  };
+}
+
 const EMPTY: Transaction[] = [];
 
-function createLocalRepository(): TransactionRepository {
-  let cache: Transaction[] | null = null;
-  let loadError = false;
+function createRemoteRepository(): TransactionRepository {
+  let cache: Transaction[] = EMPTY;
+  let status: LoadStatus = "idle";
+  let error: string | null = null;
+  let inflight: Promise<void> | null = null;
   const listeners = new Set<() => void>();
+  const emit = () => listeners.forEach((l) => l());
+  const set = (next: Transaction[]) => { cache = next; emit(); };
 
-  const read = (): Transaction[] => {
-    if (typeof window === "undefined") return EMPTY;
-    if (cache) return cache;
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      cache = Array.isArray(parsed) ? parsed.map((t) => (t && typeof t === "object" && !("createdAt" in t) ? { ...t, createdAt: `${(t as Transaction).date}T00:00:00.000Z` } : t)).filter(isValid) : [];
-    } catch {
-      loadError = true;
-      cache = [];
-    }
-    return cache;
-  };
-
-  /** Grava e só atualiza a tela se a gravação der certo; lança StorageError caso contrário. */
-  const write = (next: Transaction[]) => {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      throw new StorageError("Não foi possível salvar no navegador. Verifique se o armazenamento está liberado e com espaço.");
-    }
-    cache = next;
-    listeners.forEach((l) => l());
-  };
-
-  const make = (t: NewTransaction): Transaction => {
-    if (!isValid({ ...t, id: "x", createdAt: "x" })) throw new StorageError("Dados da transação inválidos.");
-    return { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-  };
-
-  return {
-    list: read,
-    hadLoadError: () => (read(), loadError),
-    add(t) {
-      const created = make(t);
-      write([created, ...read()]);
+  const repo: TransactionRepository = {
+    list: () => cache,
+    status: () => status,
+    loadError: () => error,
+    load() {
+      if (inflight) return inflight;
+      status = "loading";
+      emit();
+      inflight = (async () => {
+        const { data, error: err } = await supabase.from("transactions").select(COLUMNS).order("transaction_date", { ascending: false }).order("created_at", { ascending: false });
+        if (err) {
+          status = "error";
+          error = friendlyError(err, "Não foi possível carregar suas transações.");
+        } else {
+          status = "ready";
+          error = null;
+          cache = (data as Row[]).map(fromRow);
+        }
+        emit();
+      })().catch((e) => {
+        status = "error";
+        error = friendlyError(e, "Não foi possível carregar suas transações.");
+        emit();
+      }).finally(() => { inflight = null; });
+      return inflight;
+    },
+    async add(t) {
+      const row = toRow(t);
+      const { data, error: err } = await supabase.from("transactions").insert(row).select(COLUMNS).single();
+      if (err || !data) throw new StorageError(friendlyError(err, "Não foi possível salvar a transação."));
+      const created = fromRow(data as Row);
+      set([created, ...cache]);
       return created;
     },
-    addMany(ts) {
-      write([...ts.map(make), ...read()]);
+    async addMany(ts) {
+      const rows = ts.map(toRow);
+      const { data, error: err } = await supabase.from("transactions").insert(rows).select(COLUMNS);
+      if (err || !data) throw new StorageError(friendlyError(err, "Não foi possível salvar as transações."));
+      set([...(data as Row[]).map(fromRow), ...cache]);
     },
-    remove(id) {
-      write(read().filter((t) => t.id !== id));
+    async remove(id) {
+      const { error: err } = await supabase.from("transactions").delete().eq("id", id);
+      if (err) throw new StorageError(friendlyError(err, "Não foi possível excluir a transação."));
+      set(cache.filter((t) => t.id !== id));
     },
-    removeSamples() {
-      write(read().filter((t) => !t.sample));
+    async removeSamples() {
+      const { error: err } = await supabase.from("transactions").delete().eq("is_sample", true);
+      if (err) throw new StorageError(friendlyError(err, "Não foi possível remover os exemplos."));
+      set(cache.filter((t) => !t.sample));
+    },
+    reset() {
+      cache = EMPTY;
+      status = "idle";
+      error = null;
+      emit();
     },
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
   };
+  return repo;
 }
 
-export const repository: TransactionRepository = createLocalRepository();
+export const repository: TransactionRepository = createRemoteRepository();
 
-/** Lista ordenada (mais recente primeiro); atualiza automaticamente. */
+/** Lista do usuário autenticado; carrega na primeira utilização e atualiza automaticamente. */
 export function useTransactions(): Transaction[] {
   const list = useSyncExternalStore(repository.subscribe, repository.list, () => EMPTY);
+  useEffect(() => {
+    if (repository.status() === "idle") void repository.load();
+  }, []);
   return list;
+}
+
+export function useLoadState(): { status: LoadStatus; error: string | null } {
+  const status = useSyncExternalStore(repository.subscribe, repository.status, () => "idle" as LoadStatus);
+  return { status, error: repository.loadError() };
 }
 
 export function sortByDate(list: Transaction[]): Transaction[] {

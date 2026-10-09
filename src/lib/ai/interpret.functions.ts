@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** Resposta bruta da IA (validada de novo no navegador antes da confirmação). */
 export const aiInterpretationSchema = z.object({
@@ -36,6 +37,7 @@ Regras:
 - reply: frase curta e amigável em pt-BR. Se faltar algo, peça exatamente a informação faltante. Nunca diga que salvou ou registrou algo.`;
 
 export const interpretMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .validator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }): Promise<InterpretResult> => {
     const apiKey = process.env["LOVABLE_API_KEY"];
