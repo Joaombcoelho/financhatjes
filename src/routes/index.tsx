@@ -3,7 +3,7 @@ import { ArrowDownCircle, ArrowUpCircle, MessageCircle, Scale } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/finance/Notice";
 import { TransactionList } from "@/components/finance/TransactionList";
-import { repository, sampleTransactions, sortByDate, summarize, useTransactions } from "@/lib/finance/store";
+import { repository, sortByDate, summarize, useTransactions } from "@/lib/finance/store";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
@@ -65,9 +65,9 @@ function Dashboard() {
       {list.length === 0 && (
         <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
           <p className="font-semibold">Nenhuma transação ainda.</p>
-          <p className="mt-1 text-muted-foreground">Registre pelo chat ou no histórico, ou carregue dados de exemplo para demonstração.</p>
-          <Button className="mt-4" variant="outline" size="lg" onClick={() => repository.addMany(sampleTransactions())}>
-            Carregar dados de exemplo
+          <p className="mt-1 text-muted-foreground">Registre seu primeiro gasto ou recebimento pelo chat ou no histórico.</p>
+          <Button asChild className="mt-4" variant="outline" size="lg">
+            <Link to="/historico">Adicionar no histórico</Link>
           </Button>
         </div>
       )}
@@ -109,12 +109,12 @@ function Dashboard() {
       {hasSamples && (
         <Notice>
           Há dados de exemplo (marcados com o selo “Exemplo”).{" "}
-          <button className="font-semibold underline underline-offset-4" onClick={() => repository.removeSamples()}>
+          <button className="font-semibold underline underline-offset-4" onClick={() => { try { repository.removeSamples(); } catch { /* erro de gravação: mantém os dados */ } }}>
             Remover dados de exemplo
           </button>
         </Notice>
       )}
-      <Notice>Seus dados ficam salvos apenas neste navegador. A sincronização com banco de dados ainda será integrada.</Notice>
+      <Notice>Seus dados ficam salvos apenas neste navegador. Ao limpar os dados do site, eles serão apagados.</Notice>
     </div>
   );
 }

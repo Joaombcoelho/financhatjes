@@ -42,7 +42,7 @@ const hasWord = (text: string, words: string[]) =>
 
 export function parseAmount(text: string): number | null {
   const m = text.match(AMOUNT_RE);
-  if (!m) return null;
+  if (!m || !m[1]) return null;
   const value = Number(m[1].replace(/\./g, "") + "." + (m[2] ?? "0"));
   return value > 0 ? value : null;
 }

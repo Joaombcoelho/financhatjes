@@ -24,11 +24,13 @@ export interface Transaction {
   category: Category;
   /** Data no formato AAAA-MM-DD. */
   date: string;
+  /** Momento de criação (ISO). */
+  createdAt: string;
   /** true para dados demonstrativos. */
   sample?: boolean;
 }
 
-export type NewTransaction = Omit<Transaction, "id">;
+export type NewTransaction = Omit<Transaction, "id" | "createdAt">;
 
 export function categoriesFor(type: TransactionType): readonly Category[] {
   return type === "receita" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;

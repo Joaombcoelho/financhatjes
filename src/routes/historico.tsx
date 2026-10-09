@@ -50,8 +50,13 @@ function History() {
             submitLabel="Salvar transação"
             onCancel={() => setAdding(false)}
             onSubmit={(t) => {
-              repository.add(t);
-              toast.success("Transação adicionada.");
+              try {
+                repository.add(t);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+                return;
+              }
+              toast.success("Transação salva.");
               setFormKey((k) => k + 1);
               setAdding(false);
             }}
@@ -63,7 +68,7 @@ function History() {
         {list.length === 0 ? (
           <div className="py-8 text-center">
             <p className="font-semibold">Nenhuma transação ainda.</p>
-            <Button className="mt-4" variant="outline" size="lg" onClick={() => repository.addMany(sampleTransactions())}>
+            <Button className="mt-4" variant="outline" size="lg" onClick={() => { try { repository.addMany(sampleTransactions()); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); } }}>
               Carregar dados de exemplo
             </Button>
           </div>
@@ -71,13 +76,17 @@ function History() {
           <TransactionList
             items={list}
             onDelete={(id) => {
-              repository.remove(id);
-              toast.success("Transação excluída.");
+              try {
+                repository.remove(id);
+                toast.success("Transação excluída.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Não foi possível excluir.");
+              }
             }}
           />
         )}
       </section>
-      <Notice>Seus dados ficam salvos apenas neste navegador. A sincronização com banco de dados ainda será integrada.</Notice>
+      <Notice>Seus dados ficam salvos apenas neste navegador. Ao limpar os dados do site, eles serão apagados.</Notice>
     </div>
   );
 }
