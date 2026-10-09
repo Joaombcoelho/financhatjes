@@ -36,7 +36,7 @@ Regras:
 - reply: frase curta e amigável em pt-BR. Se faltar algo, peça exatamente a informação faltante. Nunca diga que salvou ou registrou algo.`;
 
 export const interpretMessage = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => inputSchema.parse(input))
+  .validator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data }): Promise<InterpretResult> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) return { ok: false, message: "A IA não está configurada no servidor (chave ausente)." };

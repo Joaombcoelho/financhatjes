@@ -11,5 +11,5 @@
 
 ## Architecture rules
 - Transactions go through the `TransactionRepository` interface in `src/lib/finance/store.ts` (currently localStorage) — swap the implementation to add a database without touching screens.
-- Chat interpretation goes through the `MessageParser` type in `src/lib/finance/parser.ts` (currently rule-based) — replace with an AI server function later; transactions are saved only after explicit user confirmation.
+- Chat interpretation runs in the `interpretMessage` server function (`src/lib/ai/`) via Lovable AI Gateway, and its output is re-validated in `validate.ts` before any preview — keeps the key server-side and never trusts the AI; the AI never saves, only explicit user confirmation writes to the repository.
 - Demo data must be flagged `sample: true` and visibly labeled "Exemplo" — the product must never present demo or simulated features as real.
