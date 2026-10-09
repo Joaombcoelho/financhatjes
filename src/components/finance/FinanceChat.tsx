@@ -36,9 +36,8 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
   const saving = useRef(new Set<number>());
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => inputRef.current?.focus(), []);
   useEffect(() => {
-    if (!loading) inputRef.current?.focus();
+    if (!loading && messages.length > 1) inputRef.current?.focus();
   }, [loading]);
 
   const push = (...m: Msg[]) => setMessages((prev) => [...prev, ...m]);
