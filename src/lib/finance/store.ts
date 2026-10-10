@@ -72,7 +72,7 @@ function fromRow(r: Row): Transaction {
     type: r.type === "income" ? "receita" : "despesa",
     description: r.description,
     amount: Number(r.amount),
-    category: r.category,
+    category: r.category as Transaction["category"],
     date: r.transaction_date,
     createdAt: r.created_at,
     ...(r.is_sample ? { sample: true } : {}),
