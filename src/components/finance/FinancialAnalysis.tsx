@@ -28,7 +28,7 @@ function useChartColors() {
 
 function sliceColor(colors: string[], category: string) {
   const index = EXPENSE_CATEGORIES.indexOf(category as (typeof EXPENSE_CATEGORIES)[number]);
-  return colors[index >= 0 ? index % PALETTE_VARS.length : PALETTE_VARS.length - 1];
+  return colors[index >= 0 ? index % PALETTE_VARS.length : PALETTE_VARS.length - 1] ?? "var(--color-primary)";
 }
 
 /** "23,5%" sem usar só a cor para comunicar a fatia. */
