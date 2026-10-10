@@ -58,7 +58,7 @@ function PiePanel({ slices, caption, colors }: { slices: Slice[]; caption: strin
                 data={slices}
                 dataKey="value"
                 nameKey="label"
-                innerRadius="58%"
+                innerRadius="63%"
                 outerRadius="88%"
                 paddingAngle={slices.length > 1 ? 2 : 0}
                 stroke="none"
@@ -76,9 +76,9 @@ function PiePanel({ slices, caption, colors }: { slices: Slice[]; caption: strin
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{caption}</span>
-          <span className="text-lg font-bold tabular-nums">{formatBRL(total)}</span>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
+          <span className="max-w-full text-[11px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">{caption}</span>
+          <span className="text-base font-bold tabular-nums">{formatBRL(total)}</span>
         </div>
       </div>
       <ul className="mt-4 space-y-2 text-sm">
