@@ -293,9 +293,6 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
             maxFiles={0}
             className="min-w-0"
           >
-            <label htmlFor="chat-input" className="sr-only">
-              Escreva sua mensagem
-            </label>
             <PromptInputTextarea
               id="chat-input"
               ref={inputRef}
