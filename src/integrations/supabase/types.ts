@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      reserve_goals: {
+        Row: {
+          mode: string
+          months: number | null
+          target_amount: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          mode: string
+          months?: number | null
+          target_amount?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          mode?: string
+          months?: number | null
+          target_amount?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reserve_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          movement_date: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind: string
+          movement_date: string
+          note?: string | null
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          movement_date?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
