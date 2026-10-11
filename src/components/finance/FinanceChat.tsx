@@ -90,16 +90,15 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
   }
 
   return (
-    <section aria-labelledby="chat-title" className={embedded ? "flex min-w-0 flex-col gap-4 border-y border-border py-6" : "mx-auto flex max-w-2xl flex-col gap-4"}>
+    <section aria-labelledby="chat-title" className={embedded ? "flex min-w-0 flex-col gap-4 border-y border-border py-6" : "mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4"}>
       <div>
         <h2 id="chat-title" className={embedded ? "text-xl font-bold" : "text-3xl font-bold"}>Chat financeiro</h2>
         <p className="text-muted-foreground">Escreva uma frase, confira os dados e confirme.</p>
       </div>
-      <Notice>
-        A IA apenas interpreta sua mensagem; nada é salvo sem a sua confirmação. Somente o texto que você escreve é enviado à IA. A conversa não é guardada ao sair da página; as transações confirmadas, sim.
-      </Notice>
-
-      <Conversation className="h-72 flex-none rounded-lg border border-border bg-surface motion-reduce:scroll-auto" aria-label="Mensagens">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="min-w-0">
+      <h3 className="mb-2 text-sm font-semibold">Conversa</h3>
+      <Conversation className="h-64 min-w-0 flex-none rounded-lg border border-border bg-surface motion-reduce:scroll-auto md:h-80" aria-label="Mensagens">
         <ConversationContent className="gap-4" aria-live="polite">
           {messages.map((m) => {
             if (m.role === "user")
@@ -185,14 +184,10 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
         </ConversationContent>
         <ConversationScrollButton aria-label="Ir para a última mensagem" />
       </Conversation>
-
-      <div className="flex flex-wrap gap-2" aria-label="Exemplos de mensagem">
-        {EXAMPLES.map((ex) => (
-          <Button key={ex} variant="outline" size="sm" disabled={loading} onClick={() => void send(ex)}>{ex}</Button>
-        ))}
       </div>
-
-      <PromptInput onSubmit={() => { void send(input); }} maxFiles={0}>
+      <div className="flex min-w-0 flex-col gap-3">
+      <label htmlFor="chat-input" className="text-sm font-semibold">Sua mensagem</label>
+      <PromptInput onSubmit={() => { void send(input); }} maxFiles={0} className="min-w-0">
         <label htmlFor="chat-input" className="sr-only">Escreva sua mensagem</label>
         <PromptInputTextarea
           id="chat-input"
@@ -202,12 +197,22 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ex.: Gastei R$ 35 no mercado"
           autoComplete="off"
-          className="text-base"
+          className="min-h-24 text-base md:min-h-36"
         />
         <PromptInputFooter className="justify-end">
           <PromptInputSubmit status={loading ? "submitted" : "ready"} disabled={!input.trim() || loading} aria-label="Enviar mensagem" title="Enviar mensagem" className="h-10 w-10" />
         </PromptInputFooter>
       </PromptInput>
+      <div className="flex flex-col items-start gap-2" aria-label="Exemplos de mensagem">
+        {EXAMPLES.map((ex) => (
+          <Button key={ex} variant="outline" size="sm" className="h-auto max-w-full whitespace-normal py-2 text-left" disabled={loading} onClick={() => void send(ex)}>{ex}</Button>
+        ))}
+      </div>
+      </div>
+      </div>
+      <Notice>
+        A IA apenas interpreta sua mensagem; nada é salvo sem a sua confirmação. Somente o texto que você escreve é enviado à IA. A conversa não é guardada ao sair da página; as transações confirmadas, sim.
+      </Notice>
     </section>
   );
 }
