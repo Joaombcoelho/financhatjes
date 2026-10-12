@@ -8,6 +8,8 @@ import { FinanceChat } from "@/components/finance/FinanceChat";
 import { FinancialAnalysis } from "@/components/finance/FinancialAnalysis";
 import { repository, sortByDate, summarize, useLoadState, useTransactions } from "@/lib/finance/store";
 import { PERIOD_LABELS, periodBounds, transactionsInPeriod, type Period } from "@/lib/finance/dashboard";
+import { useReserve } from "@/lib/finance/reserve";
+import { reserveBalance } from "@/lib/finance/reserve-calc";
 import { formatBRL, formatDate, todayISO } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -46,7 +48,9 @@ function Dashboard() {
   const real = list.filter((t) => !t.sample);
   const scoped = transactionsInPeriod(real, period, today);
   const { income, expense, balance } = summarize(scoped);
-  const accumulated = summarize(real.filter((t) => t.date <= today)).balance;
+  const reserve = useReserve();
+  const saved = reserveBalance(reserve.movements);
+  const accumulated = summarize(real.filter((t) => t.date <= today)).balance - saved;
   const recent = sortByDate(real).slice(0, 5);
   const bounds = periodBounds(period, today);
 
@@ -66,7 +70,7 @@ function Dashboard() {
       </div>
       <p className="text-sm text-muted-foreground">Indicadores e gráficos: {formatDate(bounds.start)} a {formatDate(bounds.end)}.</p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Resumo financeiro">
-        <StatCard label="Saldo atual" value={accumulated} detail="Saldo acumulado até hoje, em todos os períodos." icon={Scale} tone="neutral" />
+        <StatCard label="Saldo disponível" value={accumulated} detail={saved ? `Saldo acumulado até hoje, já descontando ${formatBRL(saved)} guardados na reserva.` : "Saldo acumulado até hoje, em todos os períodos."} icon={Scale} tone="neutral" />
         <StatCard label="Receitas" value={income} detail="Total recebido no período selecionado." icon={ArrowUpCircle} tone="income" />
         <StatCard label="Despesas" value={expense} detail="Total gasto no período selecionado." icon={ArrowDownCircle} tone="expense" />
         <StatCard label="Resultado do período" value={balance} detail="Receitas menos despesas do período." icon={TrendingUp} tone="neutral" />

@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { repository } from "@/lib/finance/store";
+import { reserveStore } from "@/lib/finance/reserve";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -126,7 +127,7 @@ function RootComponent() {
     let lastUser: string | null | undefined;
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user.id ?? null;
-      if (lastUser !== undefined && uid !== lastUser) repository.reset();
+      if (lastUser !== undefined && uid !== lastUser) { repository.reset(); reserveStore.reset(); }
       lastUser = uid;
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       void router.invalidate();
