@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, List, LogOut, MessageCircle, Wallet } from "lucide-react";
+import { LayoutDashboard, List, LogOut, MessageCircle, PiggyBank, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { repository } from "@/lib/finance/store";
+import { reserveStore } from "@/lib/finance/reserve";
 
 const items = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/chat", label: "Chat", icon: MessageCircle },
+  { to: "/reserva", label: "Reserva", icon: PiggyBank },
   { to: "/historico", label: "Histórico", icon: List },
 ] as const;
 
