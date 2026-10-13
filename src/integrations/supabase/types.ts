@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      category_budgets: {
+        Row: {
+          amount: number
+          category: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reserve_goals: {
         Row: {
           mode: string
@@ -46,6 +67,7 @@ export type Database = {
           kind: string
           movement_date: string
           note: string | null
+          pot_id: string | null
           user_id: string
         }
         Insert: {
@@ -55,6 +77,7 @@ export type Database = {
           kind: string
           movement_date: string
           note?: string | null
+          pot_id?: string | null
           user_id?: string
         }
         Update: {
@@ -64,6 +87,69 @@ export type Database = {
           kind?: string
           movement_date?: string
           note?: string | null
+          pot_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_pot_owner"
+            columns: ["pot_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "savings_pots"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      savings_pots: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          target_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          target_amount: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          target_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transaction_favorites: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          type: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
           user_id?: string
         }
         Relationships: []

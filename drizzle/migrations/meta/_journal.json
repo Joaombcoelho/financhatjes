@@ -15,6 +15,13 @@
       "when": 1791727992572,
       "tag": "0001_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791912265110,
+      "tag": "0002_finance_shortcuts_budgets_pots",
+      "breakpoints": true
     }
   ]
 }
