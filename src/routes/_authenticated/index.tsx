@@ -6,6 +6,7 @@ import { Notice } from "@/components/finance/Notice";
 import { TransactionList } from "@/components/finance/TransactionList";
 import { FinanceChat } from "@/components/finance/FinanceChat";
 import { FinancialAnalysis } from "@/components/finance/FinancialAnalysis";
+import { Budgets } from "@/components/finance/Budgets";
 import { repository, sortByDate, summarize, useLoadState, useTransactions } from "@/lib/finance/store";
 import { PERIOD_LABELS, periodBounds, transactionsInPeriod, type Period } from "@/lib/finance/dashboard";
 import { useReserve } from "@/lib/finance/reserve";
@@ -49,7 +50,7 @@ function Dashboard() {
   const scoped = transactionsInPeriod(real, period, today);
   const { income, expense, balance } = summarize(scoped);
   const reserve = useReserve();
-  const saved = reserveBalance(reserve.movements);
+  const saved = reserveBalance(reserve.movements.filter(m => m.date <= today));
   const accumulated = summarize(real.filter((t) => t.date <= today)).balance - saved;
   const recent = sortByDate(real).slice(0, 5);
   const bounds = periodBounds(period, today);
@@ -80,6 +81,7 @@ function Dashboard() {
       {list.some((t) => t.sample) && <Notice>Dados com o selo “Exemplo” não entram nos indicadores e gráficos deste dashboard. Eles continuam disponíveis no histórico. <button className="font-semibold underline underline-offset-4" onClick={async () => { try { await repository.removeSamples(); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível remover os exemplos."); } }}>Remover exemplos</button></Notice>}
       <FinanceChat embedded />
       <FinancialAnalysis items={scoped} period={period} today={today} />
+      <Budgets transactions={real} />
       <section aria-labelledby="recent-title" className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="recent-title" className="text-xl font-bold">Transações recentes</h2>

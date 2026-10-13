@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { repository } from "@/lib/finance/store";
 import { reserveStore } from "@/lib/finance/reserve";
+import { preferencesStore } from "@/lib/finance/preferences";
+import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "@/components/ui/button";
 
 const items = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
@@ -27,6 +30,8 @@ export function AppNav({ email, name }: { email: string; name: string }) {
     const { error } = await supabase.auth.signOut();
     if (error) { toast.error("Não foi possível sair. Tente novamente."); return; }
     repository.reset();
+    reserveStore.reset();
+    preferencesStore.reset();
     await navigate({ to: "/auth", replace: true });
   }
 
@@ -49,15 +54,16 @@ export function AppNav({ email, name }: { email: string; name: string }) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <span className="hidden max-w-40 truncate text-sm text-muted-foreground lg:inline" title={email}>{name || email}</span>
-            <button type="button" onClick={signOut} className={linkBase}>
+            <Button variant="ghost" type="button" onClick={signOut} className={linkBase}>
               <LogOut className="h-5 w-5" aria-hidden="true" /> Sair
-            </button>
+            </Button>
           </div>
         </div>
       </header>
       <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface md:hidden">
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-4">
           {items.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

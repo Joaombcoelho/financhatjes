@@ -8,6 +8,7 @@ export interface ReserveMovement {
   note: string | null;
   date: string;
   createdAt: string;
+  potId?: string | null;
 }
 export type GoalMode = "fixed" | "months";
 export interface ReserveGoal {
