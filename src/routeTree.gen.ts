@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedReservaRouteImport } from './routes/_authenticated/reserva'
+import { Route as ApiPublicTranscribeRouteImport } from './routes/api/public/transcribe'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -51,6 +52,11 @@ const AuthenticatedReservaRoute = AuthenticatedReservaRouteImport.update({
   path: '/reserva',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicTranscribeRoute = ApiPublicTranscribeRouteImport.update({
+  id: '/api/public/transcribe',
+  path: '/api/public/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/historico': typeof AuthenticatedHistoricoRoute
   '/reserva': typeof AuthenticatedReservaRoute
+  '/api/public/transcribe': typeof ApiPublicTranscribeRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/historico': typeof AuthenticatedHistoricoRoute
   '/reserva': typeof AuthenticatedReservaRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/public/transcribe': typeof ApiPublicTranscribeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,13 +85,27 @@ export interface FileRoutesById {
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/reserva': typeof AuthenticatedReservaRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/public/transcribe': typeof ApiPublicTranscribeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/reset-password' | '/chat' | '/historico' | '/reserva'
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/chat'
+    | '/historico'
+    | '/reserva'
+    | '/api/public/transcribe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/reset-password' | '/chat' | '/historico' | '/reserva' | '/'
+  to:
+    | '/auth'
+    | '/reset-password'
+    | '/chat'
+    | '/historico'
+    | '/reserva'
+    | '/'
+    | '/api/public/transcribe'
   id:
     | '__root__'
     | '/_authenticated'
@@ -93,12 +115,14 @@ export interface FileRouteTypes {
     | '/_authenticated/historico'
     | '/_authenticated/reserva'
     | '/_authenticated/'
+    | '/api/public/transcribe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicTranscribeRoute: typeof ApiPublicTranscribeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReservaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/transcribe': {
+      id: '/api/public/transcribe'
+      path: '/api/public/transcribe'
+      fullPath: '/api/public/transcribe'
+      preLoaderRoute: typeof ApiPublicTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -176,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicTranscribeRoute: ApiPublicTranscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
