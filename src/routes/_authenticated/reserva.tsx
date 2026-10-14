@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ArrowDownCircle, ArrowUpCircle, Lightbulb, PiggyBank, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Notice } from "@/components/finance/Notice";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { reserveStore, useReserve } from "@/lib/finance/reserve";
 import { averageMonthlyExpense, goalProgress, goalTarget, reserveBalance, type GoalMode, type ReserveKind } from "@/lib/finance/reserve-calc";
 import { useTransactions } from "@/lib/finance/store";
@@ -30,12 +32,16 @@ const btn = "inline-flex h-11 items-center justify-center gap-2 rounded-md bg-pr
 const parseMoney = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 
 function ReservePage() {
-  const { movements, goal, status, error } = useReserve();
+  const reserve = useReserve();
+  const { goal, status, error, pots } = reserve;
+  const [activePot, setActivePot] = useState<string | null>(null);
+  const movements = reserve.movements.filter(m => (m.potId ?? null) === activePot);
+  const pot = pots.find(p => p.id === activePot);
   const transactions = useTransactions();
   const today = todayISO();
   const balance = reserveBalance(movements);
   const avgExpense = averageMonthlyExpense(transactions, today);
-  const target = goalTarget(goal, avgExpense);
+  const target = pot ? pot.target_amount : goalTarget(goal, avgExpense);
   const progress = target ? goalProgress(balance, target) : null;
 
   return (
@@ -44,6 +50,9 @@ function ReservePage() {
         <h1 className="text-3xl font-bold">Reserva de emergência</h1>
         <p className="mt-2 text-muted-foreground">Registre o dinheiro que você guarda. Valores guardados saem do seu saldo disponível no painel.</p>
       </div>
+      <div className="flex flex-wrap gap-2" aria-label="Escolher cofrinho"><Button variant={activePot === null ? "default" : "outline"} onClick={() => setActivePot(null)}>Reserva Principal</Button>{pots.map(p => <Button key={p.id} variant={activePot === p.id ? "default" : "outline"} onClick={() => setActivePot(p.id)}>{p.name}</Button>)}</div>
+      <PotForm />
+      {pot && <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">{pot.name}</h2><Button variant="ghost" size="icon" title="Remover cofrinho" aria-label={`Remover cofrinho ${pot.name}`} onClick={async () => { if (!confirm("Remover este cofrinho?")) return; try { await reserveStore.removePot(pot.id); setActivePot(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao remover."); } }}><Trash2 /></Button></div>}
       {status === "error" && <Notice><span role="alert">{error}</span> <button className="font-semibold underline underline-offset-4" onClick={() => void reserveStore.load()}>Tentar novamente</button></Notice>}
       {status === "loading" && <p role="status" className="text-muted-foreground">Carregando sua reserva…</p>}
 
@@ -69,8 +78,8 @@ function ReservePage() {
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <MovementForm today={today} />
-        <GoalForm key={goal ? `${goal.mode}-${goal.targetAmount}-${goal.months}` : "none"} avgExpense={avgExpense} />
+        <MovementForm key={activePot ?? "principal"} today={today} potId={activePot} />
+        {pot ? <PotForm key={pot.id} pot={pot} /> : <GoalForm key={goal ? `${goal.mode}-${goal.targetAmount}-${goal.months}` : "none"} avgExpense={avgExpense} />}
       </div>
 
       <TipsPanel balance={balance} target={target} />
@@ -101,7 +110,7 @@ function ReservePage() {
   );
 }
 
-function MovementForm({ today }: { today: string }) {
+function MovementForm({ today, potId }: { today: string; potId: string | null }) {
   const [kind, setKind] = useState<ReserveKind>("deposit");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(today);
@@ -112,7 +121,7 @@ function MovementForm({ today }: { today: string }) {
     const value = parseMoney(amount);
     if (!Number.isFinite(value) || value <= 0) { toast.error("Informe um valor maior que zero."); return; }
     setSaving(true);
-    try { await reserveStore.add(kind, value, date, note); toast.success(kind === "deposit" ? "Valor guardado na reserva." : "Retirada registrada."); setAmount(""); setNote(""); }
+    try { await reserveStore.add(kind, value, date, note, potId); toast.success(kind === "deposit" ? "Valor guardado na reserva." : "Retirada registrada."); setAmount(""); setNote(""); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao salvar."); }
     finally { setSaving(false); }
   }
@@ -135,6 +144,15 @@ function MovementForm({ today }: { today: string }) {
       <button type="submit" className={`${btn} w-full`} disabled={saving}>{saving ? "Salvando…" : "Registrar"}</button>
     </form>
   );
+}
+
+function PotForm({ pot }: { pot?: { id: string; name: string; target_amount: number } }) {
+  const [open, setOpen] = useState(!!pot);
+  const [name, setName] = useState(pot?.name ?? "");
+  const [amount, setAmount] = useState(pot ? String(pot.target_amount).replace(".", ",") : "");
+  const [saving, setSaving] = useState(false);
+  if (!open) return <Button variant="outline" onClick={() => setOpen(true)}><PiggyBank /> Novo cofrinho</Button>;
+  return <form className="space-y-3 border-y border-border py-4" onSubmit={async e => { e.preventDefault(); if (saving) return; setSaving(true); try { await reserveStore.savePot(name, parseMoney(amount), pot?.id); toast.success("Cofrinho salvo."); if (!pot) { setOpen(false); setName(""); setAmount(""); } } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao salvar."); } finally { setSaving(false); } }}><h2 className="text-lg font-bold">{pot ? "Editar meta do cofrinho" : "Novo cofrinho"}</h2><label className="block text-sm font-semibold">Nome<Input aria-label={pot ? "Nome do cofrinho selecionado" : "Nome do novo cofrinho"} maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Viagem" required /></label><label className="block text-sm font-semibold">Meta (R$)<Input aria-label={pot ? "Meta do cofrinho selecionado" : "Meta do novo cofrinho"} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} required /></label><div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar cofrinho"}</Button>{!pot && <Button type="button" variant="ghost" disabled={saving} onClick={() => setOpen(false)}>Cancelar</Button>}</div></form>;
 }
 
 function GoalForm({ avgExpense }: { avgExpense: number }) {

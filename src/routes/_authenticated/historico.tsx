@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/finance/Notice";
 import { TransactionForm } from "@/components/finance/TransactionForm";
 import { TransactionList } from "@/components/finance/TransactionList";
+import { ScheduleFields } from "@/components/finance/ScheduleFields";
+import { ExportHistory } from "@/components/finance/ExportHistory";
+import type { NewTransaction } from "@/lib/finance/types";
 import { repository, sampleTransactions, sortByDate, useLoadState, useTransactions } from "@/lib/finance/store";
 
 export const Route = createFileRoute("/_authenticated/historico")({
@@ -27,6 +30,7 @@ function History() {
   const load = useLoadState();
   const [adding, setAdding] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [draft, setDraft] = useState<NewTransaction | null>(null);
 
   return (
     <div className="space-y-6">
@@ -41,27 +45,18 @@ function History() {
           </Button>
         )}
       </div>
+      <ExportHistory items={list} />
 
       {adding && (
         <section aria-labelledby="add-title" className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h2 id="add-title" className="mb-4 text-xl font-bold">Nova transação</h2>
-          <TransactionForm
+          {draft ? <><p className="mb-3 font-semibold">{draft.description}</p><ScheduleFields transaction={draft} onCancel={() => setDraft(null)} onSaved={() => { setDraft(null); setAdding(false); setFormKey(k => k + 1); toast.success("Lançamentos salvos."); }} /></> : <TransactionForm
             key={formKey}
             idPrefix="hist"
-            submitLabel="Salvar transação"
+            submitLabel="Revisar lançamentos"
             onCancel={() => setAdding(false)}
-            onSubmit={async (t) => {
-              try {
-                await repository.add(t);
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
-                return;
-              }
-              toast.success("Transação salva.");
-              setFormKey((k) => k + 1);
-              setAdding(false);
-            }}
-          />
+            onSubmit={setDraft}
+          />}
         </section>
       )}
 
