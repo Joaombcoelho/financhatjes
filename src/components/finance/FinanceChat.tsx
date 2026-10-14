@@ -4,6 +4,10 @@ import { Wallet, Check, Loader2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/finance/Notice";
 import { TransactionForm } from "@/components/finance/TransactionForm";
+import { Favorites } from "./Favorites";
+import { ScheduleFields } from "./ScheduleFields";
+import { ChatMedia, type Receipt } from "./ChatMedia";
+import { transcribeAudio } from "@/lib/ai/audio";
 import { interpretMessage } from "@/lib/ai/interpret.functions";
 import { validateInterpretation } from "@/lib/ai/validate";
 import { repository } from "@/lib/finance/store";
@@ -30,6 +34,7 @@ type Proposal = {
   status: Status;
   dateGuessed: boolean;
   error?: string | undefined;
+  scheduling?: boolean;
 };
 type Msg =
   | { id: number; role: "user"; text: string }
@@ -66,7 +71,7 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
 
   const push = (...m: Msg[]) => setMessages((prev) => [...prev, ...m]);
 
-  async function send(text: string) {
+  async function send(text: string, attachment?: Receipt) {
     const clean = text.trim().slice(0, 500);
     if (!clean || loading) return;
     push({ id: nextId++, role: "user", text: clean });
@@ -75,7 +80,9 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
     setLoading(true);
     const today = todayISO();
     try {
-      const res = await interpret({ data: { messages: pendingContext.current, today } });
+      const res = await interpret({
+        data: { messages: pendingContext.current, today, ...(attachment ? { attachment } : {}) },
+      });
       if (!res.ok) {
         push({ id: nextId++, role: "bot", text: res.message, tone: "error" });
         return;
@@ -110,6 +117,29 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
     setMessages((m) =>
       m.map((x) => (x.id === id && x.role === "proposal" ? { ...x, ...patch } : x)),
     );
+  }
+
+  async function audio(file: File) {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const text = await transcribeAudio(file);
+      setInput(text.slice(0, 500));
+      push({
+        id: nextId++,
+        role: "bot",
+        text: "Áudio transcrito. Confira o texto no campo de mensagem antes de enviar para interpretação.",
+      });
+    } catch (e) {
+      push({
+        id: nextId++,
+        role: "bot",
+        tone: "error",
+        text: e instanceof Error ? e.message : "Não foi possível ler o áudio.",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function confirm(id: number, data: NewTransaction) {
@@ -218,10 +248,23 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
                               )}
                             </dd>
                           </dl>
+                          {m.scheduling && m.status === "pending" && (
+                            <div className="mt-4">
+                              <ScheduleFields
+                                transaction={m.data}
+                                onSaved={() =>
+                                  update(m.id, { status: "confirmed", scheduling: false })
+                                }
+                                onCancel={() => update(m.id, { scheduling: false })}
+                              />
+                            </div>
+                          )}
                           {(m.status === "pending" ||
                             m.status === "error" ||
                             m.status === "saving") && (
-                            <div className="mt-4 flex flex-wrap gap-2">
+                            <div
+                              className={`mt-4 flex flex-wrap gap-2 ${m.scheduling ? "hidden" : ""}`}
+                            >
                               <Button
                                 onClick={() => confirm(m.id, m.data)}
                                 disabled={m.status === "saving"}
@@ -239,6 +282,15 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
                               <Button
                                 variant="ghost"
                                 disabled={m.status === "saving"}
+                                onClick={() =>
+                                  update(m.id, { status: "pending", scheduling: true })
+                                }
+                              >
+                                Parcelar / repetir
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                disabled={m.status === "saving"}
                                 onClick={() => update(m.id, { status: "cancelled" })}
                               >
                                 <X aria-hidden="true" /> Cancelar
@@ -252,7 +304,7 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
                           )}
                           {m.status === "confirmed" && (
                             <p className="mt-4 font-semibold text-income" role="status">
-                              ✓ Salvo com sucesso no navegador.
+                              ✓ Salvo com sucesso na sua conta.
                             </p>
                           )}
                           {m.status === "cancelled" && (
@@ -303,7 +355,15 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
               autoComplete="off"
               className="min-h-24 text-base md:min-h-36"
             />
-            <PromptInputFooter className="justify-end">
+            <PromptInputFooter className="justify-between">
+              <ChatMedia
+                disabled={loading}
+                onReceipt={(file) => {
+                  pendingContext.current = [];
+                  void send(`Leia este comprovante: ${file.name}`, file);
+                }}
+                onAudio={(file) => void audio(file)}
+              />
               <PromptInputSubmit
                 status={loading ? "submitted" : "ready"}
                 disabled={!input.trim() || loading}
@@ -327,12 +387,19 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
               </Button>
             ))}
           </div>
+          <Favorites
+            disabled={loading}
+            onSelect={(data) => {
+              pendingContext.current = [];
+              push({ id: nextId++, role: "proposal", data, status: "pending", dateGuessed: false });
+            }}
+          />
         </div>
       </div>
       <Notice>
         A IA apenas interpreta sua mensagem; nada é salvo sem a sua confirmação. Somente o texto que
-        você escreve é enviado à IA. A conversa não é guardada ao sair da página; as transações
-        confirmadas, sim.
+        você escreve e os arquivos que envia são enviados à IA. Arquivos não ficam armazenados na
+        sua conta. A conversa não é guardada ao sair da página; as transações confirmadas, sim.
       </Notice>
     </section>
   );

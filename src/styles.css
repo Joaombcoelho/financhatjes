@@ -177,7 +177,9 @@
     font-size: 1.0625rem;
     line-height: 1.55;
   }
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     font-family: var(--font-display);
     letter-spacing: 0;
   }
