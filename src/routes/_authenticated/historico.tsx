@@ -9,15 +9,27 @@ import { TransactionList } from "@/components/finance/TransactionList";
 import { ScheduleFields } from "@/components/finance/ScheduleFields";
 import { ExportHistory } from "@/components/finance/ExportHistory";
 import type { NewTransaction } from "@/lib/finance/types";
-import { repository, sampleTransactions, sortByDate, useLoadState, useTransactions } from "@/lib/finance/store";
+import {
+  repository,
+  sampleTransactions,
+  sortByDate,
+  useLoadState,
+  useTransactions,
+} from "@/lib/finance/store";
 
 export const Route = createFileRoute("/_authenticated/historico")({
   head: () => ({
     meta: [
       { title: "Histórico — FinanChat" },
-      { name: "description", content: "Lista de receitas e despesas: adicione ou exclua transações." },
+      {
+        name: "description",
+        content: "Lista de receitas e despesas: adicione ou exclua transações.",
+      },
       { property: "og:title", content: "Histórico — FinanChat" },
-      { property: "og:description", content: "Todas as suas transações com descrição, valor, categoria e data." },
+      {
+        property: "og:description",
+        content: "Todas as suas transações com descrição, valor, categoria e data.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -48,15 +60,36 @@ function History() {
       <ExportHistory items={list} />
 
       {adding && (
-        <section aria-labelledby="add-title" className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 id="add-title" className="mb-4 text-xl font-bold">Nova transação</h2>
-          {draft ? <><p className="mb-3 font-semibold">{draft.description}</p><ScheduleFields transaction={draft} onCancel={() => setDraft(null)} onSaved={() => { setDraft(null); setAdding(false); setFormKey(k => k + 1); toast.success("Lançamentos salvos."); }} /></> : <TransactionForm
-            key={formKey}
-            idPrefix="hist"
-            submitLabel="Revisar lançamentos"
-            onCancel={() => setAdding(false)}
-            onSubmit={setDraft}
-          />}
+        <section
+          aria-labelledby="add-title"
+          className="rounded-xl border border-border bg-card p-5 shadow-sm"
+        >
+          <h2 id="add-title" className="mb-4 text-xl font-bold">
+            Nova transação
+          </h2>
+          {draft ? (
+            <>
+              <p className="mb-3 font-semibold">{draft.description}</p>
+              <ScheduleFields
+                transaction={draft}
+                onCancel={() => setDraft(null)}
+                onSaved={() => {
+                  setDraft(null);
+                  setAdding(false);
+                  setFormKey((k) => k + 1);
+                  toast.success("Lançamentos salvos.");
+                }}
+              />
+            </>
+          ) : (
+            <TransactionForm
+              key={formKey}
+              idPrefix="hist"
+              submitLabel="Revisar lançamentos"
+              onCancel={() => setAdding(false)}
+              onSubmit={setDraft}
+            />
+          )}
         </section>
       )}
 
@@ -64,14 +97,29 @@ function History() {
         {load.status === "error" ? (
           <div role="alert" className="py-8 text-center">
             <p className="font-semibold text-destructive">{load.error}</p>
-            <Button className="mt-4" variant="outline" onClick={() => void repository.load()}>Tentar novamente</Button>
+            <Button className="mt-4" variant="outline" onClick={() => void repository.load()}>
+              Tentar novamente
+            </Button>
           </div>
         ) : load.status !== "ready" ? (
-          <p role="status" className="py-8 text-center text-muted-foreground">Carregando transações…</p>
+          <p role="status" className="py-8 text-center text-muted-foreground">
+            Carregando transações…
+          </p>
         ) : list.length === 0 ? (
           <div className="py-8 text-center">
             <p className="font-semibold">Nenhuma transação ainda.</p>
-            <Button className="mt-4" variant="outline" size="lg" onClick={async () => { try { await repository.addMany(sampleTransactions()); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); } }}>
+            <Button
+              className="mt-4"
+              variant="outline"
+              size="lg"
+              onClick={async () => {
+                try {
+                  await repository.addMany(sampleTransactions());
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+                }
+              }}
+            >
               Carregar dados de exemplo
             </Button>
           </div>

@@ -80,7 +80,9 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
     setLoading(true);
     const today = todayISO();
     try {
-      const res = await interpret({ data: { messages: pendingContext.current, today, ...(attachment ? { attachment } : {}) } });
+      const res = await interpret({
+        data: { messages: pendingContext.current, today, ...(attachment ? { attachment } : {}) },
+      });
       if (!res.ok) {
         push({ id: nextId++, role: "bot", text: res.message, tone: "error" });
         return;
@@ -123,9 +125,21 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
     try {
       const text = await transcribeAudio(file);
       setInput(text.slice(0, 500));
-      push({ id: nextId++, role: "bot", text: "Áudio transcrito. Confira o texto no campo de mensagem antes de enviar para interpretação." });
-    } catch (e) { push({ id: nextId++, role: "bot", tone: "error", text: e instanceof Error ? e.message : "Não foi possível ler o áudio." }); }
-    finally { setLoading(false); }
+      push({
+        id: nextId++,
+        role: "bot",
+        text: "Áudio transcrito. Confira o texto no campo de mensagem antes de enviar para interpretação.",
+      });
+    } catch (e) {
+      push({
+        id: nextId++,
+        role: "bot",
+        tone: "error",
+        text: e instanceof Error ? e.message : "Não foi possível ler o áudio.",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function confirm(id: number, data: NewTransaction) {
@@ -234,11 +248,23 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
                               )}
                             </dd>
                           </dl>
-                          {m.scheduling && m.status === "pending" && <div className="mt-4"><ScheduleFields transaction={m.data} onSaved={() => update(m.id, { status: "confirmed", scheduling: false })} onCancel={() => update(m.id, { scheduling: false })} /></div>}
+                          {m.scheduling && m.status === "pending" && (
+                            <div className="mt-4">
+                              <ScheduleFields
+                                transaction={m.data}
+                                onSaved={() =>
+                                  update(m.id, { status: "confirmed", scheduling: false })
+                                }
+                                onCancel={() => update(m.id, { scheduling: false })}
+                              />
+                            </div>
+                          )}
                           {(m.status === "pending" ||
                             m.status === "error" ||
                             m.status === "saving") && (
-                            <div className={`mt-4 flex flex-wrap gap-2 ${m.scheduling ? "hidden" : ""}`}>
+                            <div
+                              className={`mt-4 flex flex-wrap gap-2 ${m.scheduling ? "hidden" : ""}`}
+                            >
                               <Button
                                 onClick={() => confirm(m.id, m.data)}
                                 disabled={m.status === "saving"}
@@ -256,8 +282,12 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
                               <Button
                                 variant="ghost"
                                 disabled={m.status === "saving"}
-                                onClick={() => update(m.id, { status: "pending", scheduling: true })}
-                              >Parcelar / repetir</Button>
+                                onClick={() =>
+                                  update(m.id, { status: "pending", scheduling: true })
+                                }
+                              >
+                                Parcelar / repetir
+                              </Button>
                               <Button
                                 variant="ghost"
                                 disabled={m.status === "saving"}
@@ -326,7 +356,14 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
               className="min-h-24 text-base md:min-h-36"
             />
             <PromptInputFooter className="justify-between">
-              <ChatMedia disabled={loading} onReceipt={file => { pendingContext.current = []; void send(`Leia este comprovante: ${file.name}`, file); }} onAudio={file => void audio(file)} />
+              <ChatMedia
+                disabled={loading}
+                onReceipt={(file) => {
+                  pendingContext.current = [];
+                  void send(`Leia este comprovante: ${file.name}`, file);
+                }}
+                onAudio={(file) => void audio(file)}
+              />
               <PromptInputSubmit
                 status={loading ? "submitted" : "ready"}
                 disabled={!input.trim() || loading}
@@ -350,13 +387,19 @@ export function FinanceChat({ embedded = false }: { embedded?: boolean }) {
               </Button>
             ))}
           </div>
-          <Favorites disabled={loading} onSelect={data => { pendingContext.current = []; push({ id: nextId++, role: "proposal", data, status: "pending", dateGuessed: false }); }} />
+          <Favorites
+            disabled={loading}
+            onSelect={(data) => {
+              pendingContext.current = [];
+              push({ id: nextId++, role: "proposal", data, status: "pending", dateGuessed: false });
+            }}
+          />
         </div>
       </div>
       <Notice>
         A IA apenas interpreta sua mensagem; nada é salvo sem a sua confirmação. Somente o texto que
-        você escreve e os arquivos que envia são enviados à IA. Arquivos não ficam armazenados na sua conta. A conversa não é guardada ao sair da página; as transações
-        confirmadas, sim.
+        você escreve e os arquivos que envia são enviados à IA. Arquivos não ficam armazenados na
+        sua conta. A conversa não é guardada ao sair da página; as transações confirmadas, sim.
       </Notice>
     </section>
   );

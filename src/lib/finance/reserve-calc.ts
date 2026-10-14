@@ -19,7 +19,10 @@ export interface ReserveGoal {
 
 /** Total guardado: depósitos menos retiradas. */
 export function reserveBalance(list: ReserveMovement[]): number {
-  const cents = list.reduce((s, m) => s + Math.round(m.amount * 100) * (m.kind === "deposit" ? 1 : -1), 0);
+  const cents = list.reduce(
+    (s, m) => s + Math.round(m.amount * 100) * (m.kind === "deposit" ? 1 : -1),
+    0,
+  );
   return cents / 100;
 }
 
@@ -37,7 +40,8 @@ export function averageMonthlyExpense(list: Transaction[], today: string): numbe
 /** Valor da meta; null quando não dá para calcular. */
 export function goalTarget(goal: ReserveGoal | null, avgMonthlyExpense: number): number | null {
   if (!goal) return null;
-  if (goal.mode === "fixed") return goal.targetAmount && goal.targetAmount > 0 ? goal.targetAmount : null;
+  if (goal.mode === "fixed")
+    return goal.targetAmount && goal.targetAmount > 0 ? goal.targetAmount : null;
   if (!goal.months || avgMonthlyExpense <= 0) return null;
   return Math.round(goal.months * avgMonthlyExpense * 100) / 100;
 }
